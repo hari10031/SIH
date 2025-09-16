@@ -20,7 +20,7 @@ const MAX_ATTEMPTS = 3;
 const OTP_EXPIRY_MINUTES = 5;
 
 class OTPService {
-  private baseURL = 'YOUR_API_BASE_URL'; // Replace with your actual API base URL
+  private baseURL = 'http://localhost:3001/api'; // Backend API base URL
 
   /**
    * Send OTP to phone number
@@ -37,14 +37,7 @@ class OTPService {
       }
 
       const formattedNumber = formatForAPI(validation.formattedNumber);
-
-      // For development/testing - store OTP locally
-      // In production, remove this and rely on actual SMS service
-      const testOTP = this.generateOTP();
-      await this.storeOTPSession(formattedNumber, testOTP);
-
-      // Actual API call (uncomment for production)
-      /*
+      // Actual API call to backend
       const response = await fetch(`${this.baseURL}/auth/send-otp`, {
         method: 'POST',
         headers: {
@@ -54,24 +47,25 @@ class OTPService {
           phoneNumber: formattedNumber,
         }),
       });
+      console.log(response);
+
+      const data = await response.json();
 
       if (!response.ok) {
-        const errorData = await response.json();
         return {
           success: false,
-          message: errorData.message || 'Failed to send OTP',
+          message: data.message || 'Failed to send OTP',
         };
       }
 
-      const data = await response.json();
-      */
-
-      // Mock success response for development
+      // For development - also store OTP locally as fallback
+      const testOTP = this.generateOTP();
+      await this.storeOTPSession(formattedNumber, testOTP);
       console.log(`Development OTP for ${formattedNumber}: ${testOTP}`);
       
       return {
         success: true,
-        message: 'OTP sent successfully',
+        message: data.message || 'OTP sent successfully',
         data: { phoneNumber: formattedNumber },
       };
     } catch (error) {
@@ -98,7 +92,37 @@ class OTPService {
 
       const formattedNumber = formatForAPI(validation.formattedNumber);
 
-      // Check stored OTP session (for development)
+      // First try with actual API
+      try {
+        const response = await fetch(`${this.baseURL}/auth/verify-otp`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phoneNumber: formattedNumber,
+            otp,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          await this.clearOTPSession(formattedNumber);
+          return {
+            success: true,
+            message: data.message || 'OTP verified successfully',
+            data: data.data,
+          };
+        } else {
+          // If API fails, fall back to local verification for development
+          console.log('API verification failed, trying local verification...');
+        }
+      } catch (apiError) {
+        console.log('API call failed, trying local verification...');
+      }
+
+      // Fallback to local verification for development
       const session = await this.getOTPSession(formattedNumber);
       if (session) {
         if (Date.now() > session.expiresAt) {
@@ -121,7 +145,7 @@ class OTPService {
           await this.clearOTPSession(formattedNumber);
           return {
             success: true,
-            message: 'OTP verified successfully',
+            message: 'OTP verified successfully (development mode)',
             data: { phoneNumber: formattedNumber },
           };
         } else {
@@ -134,35 +158,6 @@ class OTPService {
           };
         }
       }
-
-      // Actual API call (uncomment for production)
-      /*
-      const response = await fetch(`${this.baseURL}/auth/verify-otp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phoneNumber: formattedNumber,
-          otp,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        return {
-          success: false,
-          message: errorData.message || 'Invalid OTP',
-        };
-      }
-
-      const data = await response.json();
-      return {
-        success: true,
-        message: 'OTP verified successfully',
-        data,
-      };
-      */
 
       return {
         success: false,

@@ -74,6 +74,9 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
+  
+  // Backend API base URL
+  const API_BASE_URL = 'http://localhost:3001/api';
 
   useEffect(() => {
     loadUserFromStorage();
@@ -107,8 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'CLEAR_ERROR' });
 
-      // Mock API call - replace with actual API
-      const response = await fetch('YOUR_API_ENDPOINT/send-otp', {
+      const response = await fetch(`${API_BASE_URL}/auth/send-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,8 +118,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({ phoneNumber }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to send OTP');
+        throw new Error(data.message || 'Failed to send OTP');
       }
 
       dispatch({ type: 'SET_LOADING', payload: false });
@@ -131,8 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'CLEAR_ERROR' });
 
-      // Mock API call - replace with actual API
-      const response = await fetch('YOUR_API_ENDPOINT/verify-otp', {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -140,48 +143,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({ phoneNumber, otp }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Invalid OTP');
+        throw new Error(data.message || 'Invalid OTP');
       }
 
-      dispatch({ type: 'SET_LOADING', payload: false });
+      // If verification is successful and user data is returned, log them in
+      if (data.data && data.data.user) {
+        const user: User = {
+          id: data.data.user.id,
+          name: data.data.user.name,
+          email: data.data.user.email || '',
+          phoneNumber: data.data.user.phoneNumber,
+          isVerified: true,
+        };
+
+        await saveUserToStorage(user);
+        dispatch({ type: 'SET_USER', payload: user });
+      } else {
+        dispatch({ type: 'SET_LOADING', payload: false });
+      }
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Invalid OTP' });
     }
   };
 
   const login = async (phoneNumber: string, otp: string): Promise<void> => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      dispatch({ type: 'CLEAR_ERROR' });
-
-      // Mock API call - replace with actual API
-      const response = await fetch('YOUR_API_ENDPOINT/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ phoneNumber, otp }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Login failed');
-      }
-
-      const data = await response.json();
-      const user: User = {
-        id: data.user.id,
-        name: data.user.name,
-        email: data.user.email,
-        phoneNumber: data.user.phoneNumber,
-        isVerified: true,
-      };
-
-      await saveUserToStorage(user);
-      dispatch({ type: 'SET_USER', payload: user });
-    } catch (error) {
-      dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Login failed' });
-    }
+    // Use verifyOTP for login since they are the same process
+    await verifyOTP(phoneNumber, otp);
   };
 
   const signup = async (userData: { name: string; email?: string; phoneNumber: string }): Promise<void> => {
@@ -189,8 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'CLEAR_ERROR' });
 
-      // Mock API call - replace with actual API
-      const response = await fetch('YOUR_API_ENDPOINT/signup', {
+      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -198,17 +187,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify(userData),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Signup failed');
+        throw new Error(data.message || 'Signup failed');
       }
 
-      const data = await response.json();
       const user: User = {
-        id: data.user.id,
-        name: data.user.name,
-        email: data.user.email,
-        phoneNumber: data.user.phoneNumber,
-        isVerified: false,
+        id: data.data.user.id,
+        name: data.data.user.name,
+        email: data.data.user.email || '',
+        phoneNumber: data.data.user.phoneNumber,
+        isVerified: data.data.user.isPhoneVerified,
       };
 
       await saveUserToStorage(user);

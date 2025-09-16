@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View } from 'react-native';
+import { Text } from './ui';
 import * as Location from 'expo-location';
 
 interface Coords {
@@ -25,9 +26,9 @@ export default function RealTimeLocation() {
 
         subscriber = await Location.watchPositionAsync(
           {
-            accuracy: Location.Accuracy.Highest, // forces GPS
-            timeInterval: 3000,                 // update every 3s
-            distanceInterval: 0,                // update on every move
+            accuracy: Location.Accuracy.Highest, 
+            timeInterval: 3000,                 
+            distanceInterval: 0,                
           },
           (pos) => {
             setLocation({
@@ -50,23 +51,36 @@ export default function RealTimeLocation() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      {errorMsg && <Text style={styles.error}>{errorMsg}</Text>}
+    <View className="flex-1 justify-center items-center py-4">
+      {errorMsg && (
+        <Text className="text-red-500 text-base text-center mb-4">
+          {errorMsg}
+        </Text>
+      )}
       {location ? (
         <>
-          <Text style={styles.text}>Latitude: {location.latitude}</Text>
-          <Text style={styles.text}>Longitude: {location.longitude}</Text>
-          <Text style={styles.text}>Accuracy: {location.accuracy}m</Text>
+          <View className="space-y-2 w-full">
+            <View className="flex-row justify-between items-center p-3 bg-gray-50 rounded-lg">
+              <Text className="text-sm font-medium text-gray-600">Latitude:</Text>
+              <Text className="text-sm font-mono text-gray-900">{location.latitude.toFixed(6)}</Text>
+            </View>
+            <View className="flex-row justify-between items-center p-3 bg-gray-50 rounded-lg">
+              <Text className="text-sm font-medium text-gray-600">Longitude:</Text>
+              <Text className="text-sm font-mono text-gray-900">{location.longitude.toFixed(6)}</Text>
+            </View>
+            <View className="flex-row justify-between items-center p-3 bg-gray-50 rounded-lg">
+              <Text className="text-sm font-medium text-gray-600">Accuracy:</Text>
+              <Text className="text-sm font-mono text-gray-900">
+                {location.accuracy ? `${location.accuracy.toFixed(1)}m` : 'N/A'}
+              </Text>
+            </View>
+          </View>
         </>
       ) : (
-        <Text style={styles.text}>Fetching location…</Text>
+        <Text className="text-base text-gray-600 text-center">
+          Fetching location…
+        </Text>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  text: { fontSize: 16, marginVertical: 4 },
-  error: { color: 'red', fontSize: 16, marginVertical: 4 },
-});

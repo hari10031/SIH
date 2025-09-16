@@ -162,7 +162,7 @@ export default function VerifyOTPScreen() {
                 {otp.map((digit, index) => (
                   <TextInput
                     key={index}
-                    ref={ref => inputRefs.current[index] = ref}
+                    ref={ref => { inputRefs.current[index] = ref; }}
                     value={digit}
                     onChangeText={(value) => handleOtpChange(value, index)}
                     onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}

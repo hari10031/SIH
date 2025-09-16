@@ -74,7 +74,9 @@ export default function SignupScreen() {
     setIsLoading(true);
     try {
       const phoneValidation = validateIndianPhoneNumber(formData.phoneNumber);
+      // console.log("passed1");
       const response = await otpService.sendOTP(phoneValidation.formattedNumber);
+      // console.log("passed1");
       
       if (response.success) {
         // Navigate to OTP verification screen with user data
