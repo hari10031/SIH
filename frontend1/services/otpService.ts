@@ -20,7 +20,7 @@ const MAX_ATTEMPTS = 3;
 const OTP_EXPIRY_MINUTES = 5;
 
 class OTPService {
-  private baseURL = 'http://localhost:3001/api'; // Backend API base URL
+  private baseURL = 'http://localhost:3002/api'; // Backend API base URL
 
   /**
    * Send OTP to phone number
