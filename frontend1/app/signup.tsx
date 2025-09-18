@@ -67,6 +67,7 @@ export default function SignupScreen() {
   };
 
   const handleSignup = async () => {
+    console.log(formData);
     if (!validateForm()) {
       return;
     }
@@ -74,9 +75,22 @@ export default function SignupScreen() {
     setIsLoading(true);
     try {
       const phoneValidation = validateIndianPhoneNumber(formData.phoneNumber);
-      // console.log("passed1");
+      console.log("phone number validated",phoneValidation);
+      
+      // First register user data in backend
+      const signupResponse = await otpService.signup({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phonenumber: phoneValidation.formattedNumber,
+      });
+      
+      if (!signupResponse.success) {
+        Alert.alert('Error', signupResponse.message);
+        return;
+      }
+      
+      // Then send OTP
       const response = await otpService.sendOTP(phoneValidation.formattedNumber);
-      // console.log("passed1");
       
       if (response.success) {
         // Navigate to OTP verification screen with user data

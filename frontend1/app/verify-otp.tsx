@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform, Alert, TextInput } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button, Text } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { otpService } from '../services/otpService';
@@ -71,20 +72,33 @@ export default function VerifyOTPScreen() {
 
     setIsLoading(true);
     try {
-      const response = await otpService.verifyOTP(phoneNumber, otpCode);
+      const response = await otpService.verifyOTP(phoneNumber, otpCode, {
+        name: name || '',
+        email: email || ''
+      });
       
       if (response.success) {
         if (type === 'login') {
+          // For login, use AuthContext login method to update auth state
           await login(phoneNumber, otpCode);
         } else {
-          await signup({
-            name: name || '',
-            email: email || '',
-            phoneNumber,
-          });
+          // For signup, user is already created in backend during OTP verification
+          // Just update the auth context with user data from response
+          if (response.data && response.data.user) {
+            const user: any = {
+              id: response.data.user.id,
+              name: response.data.user.name,
+              email: response.data.user.email || '',
+              phoneNumber: response.data.user.phonenumber,
+              isVerified: true,
+            };
+            
+            // Save user to storage and update auth state
+            await AsyncStorage.setItem('user', JSON.stringify(user));
+          }
         }
         
-        // Navigate to home/dashboard
+        // Navigate to index page after successful authentication
         router.replace('/');
       } else {
         setError(response.message);

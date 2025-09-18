@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import authRouter from './routes/auth.routes.js';
+import uploadRouter from './routes/upload.routes.js';
 const app = express();
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -27,12 +28,13 @@ app.use(express.urlencoded({
 
 
 app.get('/', (req, res) => {
-  res.status(400).json({
+  res.status(200).json({
     message:"Backend is running !!"
   })
 });
 
 app.use('/auth',authRouter)
+app.use('/uploads',uploadRouter)
 
 
 

@@ -1,20 +1,59 @@
 import "./global.css"
+import React, { useState, useEffect } from "react";
 import { View, ActivityIndicator, ScrollView } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from '../contexts/AuthContext';
-import { Button, Text } from '../components/ui';
+import { Text } from '../components/ui';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useEffect } from 'react';
-import RealTimeLocation from '../components/Location';
+import { useLocation } from '../hooks/useLocation';
+import { useUpload } from '../hooks/useUpload';
+import LocationTracker from '../components/LocationTracker';
+import UploadForm from '../components/UploadForm';
+import UserUploads from '../components/UserUploads';
+import BottomNavigation from '../components/BottomNavigation';
+import AppHeader from '../components/AppHeader';
+import HomeActions from '../components/HomeActions';
+
+type TabType = 'home' | 'upload';
  
 export default function Index() {
   const { isAuthenticated, isLoading, user, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabType>('home');
+  
+  // Custom hooks for location and upload functionality
+  const {
+    location,
+    locationError,
+    hasLocationPermission,
+    currentAddress,
+    requestLocationPermission
+  } = useLocation();
+  
+  const {
+    description,
+    setDescription,
+    isSubmitting,
+    uploads,
+    showSubmitted,
+    handleSubmit,
+    fetchUploads
+  } = useUpload(location);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/login');
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        router.replace('/login');
+      } else {
+        requestLocationPermission();
+        fetchUploads(); // Fetch user uploads
+      }
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, fetchUploads]);
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/login');
+  };
 
   if (isLoading) {
     return (
@@ -36,48 +75,41 @@ export default function Index() {
         showsVerticalScrollIndicator={false}
       >
         <View className="flex-1 px-6 py-8">
-          {/* Header */}
-          <View className="mb-8">
-            <Text className="text-3xl font-bold text-foreground mb-2">
-              Welcome, {user?.name}!
-            </Text>
-            <Text className="text-lg text-muted-foreground mb-4">
-              Real-Time Location Tracker
-            </Text>
-            <Text className="text-base text-muted-foreground">
-              Phone: {user?.phoneNumber}
-            </Text>
-          </View>
+          <AppHeader user={user} activeTab={activeTab} />
 
-          {/* Location Component */}
-          <View className="flex-1 mb-8">
-            <View className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-              <Text className="text-xl font-semibold text-foreground mb-4">
-                Your Current Location
-              </Text>
-              <RealTimeLocation />
-            </View>
-          </View>
-
-          {/* Action Buttons */}
-          <View className="space-y-4">
-            <Button
-              title="Logout"
-              onPress={logout}
-              variant="outline"
-              className="w-full"
-            />
-          </View>
-
-          {/* Footer Info */}
-          <View className="mt-8 pt-6 border-t border-gray-200">
-            <Text className="text-center text-sm text-gray-500 leading-relaxed">
-              Your location is being tracked in real-time for security and safety purposes.
-              You can disable location sharing in your device settings.
-            </Text>
-          </View>
+          {/* Content based on active tab */}
+          {activeTab === 'home' ? (
+            <>
+              <LocationTracker
+                location={location}
+                locationError={locationError}
+                hasLocationPermission={hasLocationPermission}
+                onRequestPermission={requestLocationPermission}
+              />
+              
+              <HomeActions onLogout={handleLogout} />
+            </>
+          ) : (
+            <>
+              <UploadForm
+                description={description}
+                onDescriptionChange={setDescription}
+                onSubmit={handleSubmit}
+                isSubmitting={isSubmitting}
+                showSubmitted={showSubmitted}
+                currentLocation={location}
+              />
+              
+              <UserUploads uploads={uploads} />
+            </>
+          )}
         </View>
       </ScrollView>
+      
+      <BottomNavigation 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab} 
+      />
     </SafeAreaView>
   );
 }

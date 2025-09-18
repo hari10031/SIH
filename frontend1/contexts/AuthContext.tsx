@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [state, dispatch] = useReducer(authReducer, initialState);
   
   // Backend API base URL
-  const API_BASE_URL = 'http://localhost:3001/api';
+  const API_BASE_URL = 'http://localhost:3002/auth';
 
   useEffect(() => {
     loadUserFromStorage();
@@ -110,12 +110,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'CLEAR_ERROR' });
 
-      const response = await fetch(`${API_BASE_URL}/auth/send-otp`, {
+      const response = await fetch(`${API_BASE_URL}/send-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ phoneNumber }),
+        body: JSON.stringify({ phonenumber: phoneNumber }),
       });
 
       const data = await response.json();
@@ -135,12 +135,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'CLEAR_ERROR' });
 
-      const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+      const response = await fetch(`${API_BASE_URL}/verify-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ phoneNumber, otp }),
+        body: JSON.stringify({ phonenumber: phoneNumber, otp }),
       });
 
       const data = await response.json();
@@ -155,7 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: data.data.user.id,
           name: data.data.user.name,
           email: data.data.user.email || '',
-          phoneNumber: data.data.user.phoneNumber,
+          phoneNumber: data.data.user.phonenumber,
           isVerified: true,
         };
 
@@ -179,12 +179,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'CLEAR_ERROR' });
 
-      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+      const response = await fetch(`${API_BASE_URL}/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(userData),
+        body: JSON.stringify({
+          name: userData.name,
+          email: userData.email,
+          phonenumber: userData.phoneNumber
+        }),
       });
 
       const data = await response.json();
@@ -197,7 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: data.data.user.id,
         name: data.data.user.name,
         email: data.data.user.email || '',
-        phoneNumber: data.data.user.phoneNumber,
+        phoneNumber: data.data.user.phonenumber,
         isVerified: data.data.user.isPhoneVerified,
       };
 
